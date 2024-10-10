@@ -1,0 +1,59 @@
+---
+title: "Poisson Bootstrap Analysis"
+author: "Yiming Shi"
+date: "2024-10-10"
+output: html_document
+---
+## Introduction
+This tutorial demonstrates how to perform Poisson regression with bootstrap standard errors in R.
+
+### Load Packages#######
+```{r load-packages, message=FALSE}
+if (!require(boot)) {
+  install.packages("boot")
+}
+library(boot)
+```
+
+
+###Simulate Example Data###
+```{r simulate-example-data}
+set.seed(123)
+n <- 100
+age <- rnorm(n, mean = 50, sd = 10)
+income <- rnorm(n, mean = 50000, sd = 15000)
+visits <- rpois(n, lambda = exp(0.01 * age + 0.00002 * income))
+data <- data.frame(visits = visits, age = age, income = income)
+
+```
+
+## Fit Poisson Model
+
+```{r fit Poisson model, echo=FALSE}
+poisson_model <- glm(visits ~ age + income, family = poisson, data = data)
+summary(poisson_model)
+
+```
+```{r bootstrap function, message=FALSE}
+userformula <- visits ~ age + income #definde your formula here, which is identical to the Poisson glm model
+poisson_bootstrap <- function(data,userformula, indices) {
+  d <- data[indices, ]  # Resample data
+  model <- glm(formula=userformula, family = poisson, data = d)
+  return(coef(model))  # Return coefficients
+}
+
+```
+
+```{r Perform Bootstrap}
+set.seed(123) #set a seed for reproducibility
+boot_coef<- poisson_bootstrap(data= data,userformula=userformula) 
+#coefficient estimate of Poisson Bootstrap
+boot_coef
+boot_results <- boot(data, poisson_bootstrap, R = 1000, userformula = userformula)
+boot_se <- apply(boot_results$t, 2, sd)
+boot_Zvalue = boot_coef/boot_se
+boot_Pvalue = 2 * (1 - pnorm(abs(boot_coef/boot_se)))
+#coefficient standard error estimate of Poisson Bootstrap
+data.frame(boot_coef,boot_se,boot_Zvalue,boot_Pvalue)
+```
+

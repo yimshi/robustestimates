@@ -1,0 +1,46 @@
+---
+title: "Poisson Sandwich Analysis"
+author: "Yiming Shi"
+date: "2024-10-10"
+output: html_document
+---
+### Load Packages#######
+```{r, message=FALSE}
+# Install necessary packages
+if (!require(sandwich)) {
+  install.packages("sandwich")
+}
+if (!require(lmtest)) {
+  install.packages("lmtest")
+}
+library(sandwich)
+library(lmtest)
+```
+
+###Simulate Example Data###
+
+```{r simulate-example-data}
+set.seed(123)
+n <- 100
+age <- rnorm(n, mean = 50, sd = 10)
+income <- rnorm(n, mean = 50000, sd = 15000)
+visits <- rpois(n, lambda = exp(0.01 * age + 0.00002 * income))
+data <- data.frame(visits = visits, age = age, income = income)
+
+```
+
+## Fit Poisson Model
+
+```{r fit Poisson model, echo=FALSE}
+poisson_model <- glm(visits ~ age + income, family = poisson, data = data)
+summary(poisson_model)
+```
+
+
+```{r sandwich robust estimator, echo=FALSE}
+# Fit model with HC3 sandwich estimator for robust standard errors
+sandwich_se <- coeftest(poisson_model, vcov = vcovHC(poisson_model, type = "HC3")) # check the functions for details of various structure
+
+# View robust coefficients with sandwich standard errors
+sandwich_se
+```
